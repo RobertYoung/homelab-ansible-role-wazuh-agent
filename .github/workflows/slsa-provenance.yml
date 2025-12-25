@@ -1,0 +1,129 @@
+name: SLSA Provenance
+
+# Generate SLSA Level 3 provenance for release artifacts
+# See: https://slsa.dev/ and https://github.com/slsa-framework/slsa-github-generator
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to generate provenance for"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  # Build the Ansible role tarball and generate hash
+  build:
+    name: Build Release Artifact
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: Determine tag
+        id: tag
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Using tag: ${TAG}"
+
+      - name: Build Ansible role tarball
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          ROLE_NAME="wazuh_agent"
+          ARTIFACT_NAME="${ROLE_NAME}-${TAG}.tar.gz"
+
+          # Create tarball excluding development files
+          tar --exclude='.git' \
+              --exclude='.github' \
+              --exclude='.molecule' \
+              --exclude='molecule' \
+              --exclude='.pre-commit-config.yaml' \
+              --exclude='.yamllint' \
+              --exclude='.editorconfig' \
+              --exclude='.gitattributes' \
+              --exclude='.gitignore' \
+              --exclude='requirements.txt' \
+              --exclude='mise.toml' \
+              --exclude='CLAUDE.md' \
+              --exclude='*.md' \
+              --exclude='!README.md' \
+              -czvf "${ARTIFACT_NAME}" .
+
+          echo "Created artifact: ${ARTIFACT_NAME}"
+          ls -la "${ARTIFACT_NAME}"
+
+      - name: Generate artifact hash
+        id: hash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          ROLE_NAME="wazuh_agent"
+          ARTIFACT_NAME="${ROLE_NAME}-${TAG}.tar.gz"
+
+          # Generate SHA256 hash in the format expected by SLSA generator
+          HASH=$(sha256sum "${ARTIFACT_NAME}" | base64 -w0)
+          echo "hashes=${HASH}" >> "$GITHUB_OUTPUT"
+          echo "Generated hash for ${ARTIFACT_NAME}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: artifact
+          path: wazuh_agent-${{ steps.tag.outputs.tag }}.tar.gz
+          retention-days: 5
+          if-no-files-found: error
+
+  # Generate SLSA provenance using the official generator
+  provenance:
+    name: Generate SLSA Provenance
+    needs: [build]
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.hashes }}"
+      upload-assets: true
+      upload-tag-name: ${{ needs.build.outputs.tag }}
+
+  # Upload the release artifact to GitHub release
+  release:
+    name: Upload Release Artifact
+    needs: [build, provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - name: Download artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: artifact
+
+      - name: Upload artifact to release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          files: wazuh_agent-${{ needs.build.outputs.tag }}.tar.gz

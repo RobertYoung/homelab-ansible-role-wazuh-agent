@@ -62,6 +62,30 @@ ansible-galaxy install -r requirements.yml
 - Agent configuration (`/var/ossec/etc/ossec.conf`)
 - Agent service enabled and started
 
+## Supply Chain Security
+
+This project implements [SLSA](https://slsa.dev/) Level 3 provenance for release artifacts.
+
+### Verifying Release Provenance
+
+Download the release artifact and its provenance attestation, then verify:
+
+```bash
+# Install slsa-verifier
+go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@latest
+
+# Download release artifact and provenance from GitHub releases
+VERSION="v1.0.0"  # Replace with desired version
+curl -LO "https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/releases/download/${VERSION}/wazuh_agent-${VERSION}.tar.gz"
+curl -LO "https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/releases/download/${VERSION}/wazuh_agent-${VERSION}.tar.gz.intoto.jsonl"
+
+# Verify provenance
+slsa-verifier verify-artifact wazuh_agent-${VERSION}.tar.gz \
+  --provenance-path wazuh_agent-${VERSION}.tar.gz.intoto.jsonl \
+  --source-uri github.com/RobertYoung/homelab-ansible-role-wazuh-agent \
+  --source-tag "${VERSION}"
+```
+
 ## License
 
 MIT
