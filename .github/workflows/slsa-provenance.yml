@@ -94,13 +94,15 @@ jobs:
       upload-assets: true
       upload-tag-name: ${{ needs.build.outputs.tag }}
 
-  # Upload the release artifact to GitHub release
+  # Upload the release artifact to GitHub release and submit attestation
   release:
     name: Upload Release Artifact
     needs: [build, provenance]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Harden Runner
@@ -118,3 +120,8 @@ jobs:
         with:
           tag_name: ${{ needs.build.outputs.tag }}
           files: wazuh_agent-${{ needs.build.outputs.tag }}.tar.gz
+
+      - name: Submit attestation to GitHub
+        uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
+        with:
+          subject-path: wazuh_agent-${{ needs.build.outputs.tag }}.tar.gz
