@@ -37,15 +37,23 @@ jobs:
           disable-sudo: true
           disable-file-monitoring: false
 
+      # Generate GitHub App token to trigger downstream workflows
+      # GITHUB_TOKEN doesn't trigger other workflows (security feature)
+      # See: https://github.com/actions/create-github-app-token
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
+        with:
+          app-id: ${{ secrets.RELEASER_APP_ID }}
+          private-key: ${{ secrets.RELEASER_APP_PRIVATE_KEY }}
+
       # Checkout the repository
       # fetch-depth: 0 is required for semantic-release to analyze full commit history
-      # Action pinned to commit SHA for immutability (security best practice)
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-          # Use PAT if you need to trigger other workflows from release commits
-          # Otherwise GITHUB_TOKEN is sufficient
+          token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true
 
       # Run semantic-release using the official action
@@ -61,9 +69,8 @@ jobs:
       - name: Run semantic-release
         uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
         env:
-          # GITHUB_TOKEN is automatically provided by GitHub Actions
-          # It has the permissions specified in the job's permissions block
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use GitHub App token to allow release events to trigger other workflows
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           # Install conventional-changelog-conventionalcommits required by .releaserc.json preset
           extra_plugins: |
