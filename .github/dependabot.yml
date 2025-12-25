@@ -29,3 +29,18 @@ updates:
       prefix: "chore"
       prefix-development: "chore"
       include: "scope"
+
+  # Python/pip dependency updates
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "python"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
