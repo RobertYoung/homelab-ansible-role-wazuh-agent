@@ -1,5 +1,11 @@
 # homelab-ansible-role-wazuh-agent
 
+[![Lint](https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/actions/workflows/lint.yml/badge.svg)](https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/actions/workflows/lint.yml)
+[![Release](https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/actions/workflows/release.yml/badge.svg)](https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/actions/workflows/release.yml)
+[![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/RobertYoung/homelab-ansible-role-wazuh-agent/badge)](https://scorecard.dev/viewer/?uri=github.com/RobertYoung/homelab-ansible-role-wazuh-agent)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Ansible role for installing and configuring the Wazuh agent on Debian/Ubuntu systems.
 
 ## Requirements
@@ -66,20 +72,19 @@ ansible-galaxy install -r requirements.yml
 
 This project implements [SLSA](https://slsa.dev/) Level 3 provenance for release artifacts.
 
+- Provenance attestations are submitted to [GitHub Attestations](https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/attestations)
+- Release artifacts include `.intoto.jsonl` provenance files
+- Security posture tracked via [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/RobertYoung/homelab-ansible-role-wazuh-agent)
+
 ### Verifying Release Provenance
 
-Download the release artifact and its provenance attestation, then verify:
-
 ```bash
-# Install slsa-verifier
-go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@latest
+# Using GitHub CLI (recommended)
+gh attestation verify wazuh_agent-<VERSION>.tar.gz \
+  --repo RobertYoung/homelab-ansible-role-wazuh-agent
 
-# Download release artifact and provenance from GitHub releases
-VERSION="v1.0.0"  # Replace with desired version
-curl -LO "https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/releases/download/${VERSION}/wazuh_agent-${VERSION}.tar.gz"
-curl -LO "https://github.com/RobertYoung/homelab-ansible-role-wazuh-agent/releases/download/${VERSION}/wazuh_agent-${VERSION}.tar.gz.intoto.jsonl"
-
-# Verify provenance
+# Or using slsa-verifier
+VERSION="v1.2.0"  # Replace with desired version
 slsa-verifier verify-artifact wazuh_agent-${VERSION}.tar.gz \
   --provenance-path wazuh_agent-${VERSION}.tar.gz.intoto.jsonl \
   --source-uri github.com/RobertYoung/homelab-ansible-role-wazuh-agent \
