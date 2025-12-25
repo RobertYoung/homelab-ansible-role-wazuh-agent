@@ -1,0 +1,81 @@
+name: Bug Report
+description: Report a bug with this Ansible role
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill out the information below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Run playbook with...
+        2. Configure variable...
+        3. See error...
+    validations:
+      required: true
+
+  - type: input
+    id: ansible-version
+    attributes:
+      label: Ansible Version
+      description: Output of `ansible --version`
+      placeholder: "2.15.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Target OS
+      options:
+        - Ubuntu 20.04 (focal)
+        - Ubuntu 22.04 (jammy)
+        - Ubuntu 24.04 (noble)
+        - Debian 11 (bullseye)
+        - Debian 12 (bookworm)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Please paste any relevant log output (will be automatically formatted).
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem.
