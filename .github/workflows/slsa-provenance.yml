@@ -49,22 +49,13 @@ jobs:
           ROLE_NAME="wazuh_agent"
           ARTIFACT_NAME="${ROLE_NAME}-${TAG}.tar.gz"
 
-          # Create tarball excluding development files
-          tar --exclude='.git' \
-              --exclude='.github' \
-              --exclude='.molecule' \
-              --exclude='molecule' \
-              --exclude='.pre-commit-config.yaml' \
-              --exclude='.yamllint' \
-              --exclude='.editorconfig' \
-              --exclude='.gitattributes' \
-              --exclude='.gitignore' \
-              --exclude='requirements.txt' \
-              --exclude='mise.toml' \
-              --exclude='CLAUDE.md' \
-              --exclude='*.md' \
-              --exclude='!README.md' \
-              -czvf "${ARTIFACT_NAME}" .
+          # Stage role files to avoid tar "file changed" race condition
+          mkdir -p "staging/${ROLE_NAME}"
+          cp -r defaults handlers meta tasks templates "staging/${ROLE_NAME}/"
+          cp LICENSE README.md "staging/${ROLE_NAME}/" 2>/dev/null || true
+
+          # Create tarball from staging directory
+          tar -czvf "${ARTIFACT_NAME}" -C staging "${ROLE_NAME}"
 
           echo "Created artifact: ${ARTIFACT_NAME}"
           ls -la "${ARTIFACT_NAME}"
