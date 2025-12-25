@@ -1,0 +1,31 @@
+# Dependabot configuration for automated dependency updates
+# See: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  # GitHub Actions updates
+  # Keeps workflow actions up to date with security patches
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    # Group all GitHub Actions updates into a single PR
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    # Auto-label PRs for easier filtering
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "security"
+    # Limit open PRs to avoid clutter
+    open-pull-requests-limit: 5
+    # Keep actions pinned to commit SHAs (security best practice)
+    # Dependabot will update to new SHAs when versions change
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"

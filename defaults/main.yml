@@ -1,0 +1,15 @@
+---
+# Wazuh manager connection settings
+wazuh_manager_address: "wazuh.local.iamrobertyoung.co.uk"
+wazuh_manager_port: 1514
+
+# Agent registration settings
+wazuh_agent_group: "homelab"
+wazuh_agent_name: "{{ inventory_hostname }}"
+
+# Optional: Registration password (leave empty if not required)
+wazuh_registration_password: ""
+
+# Wazuh repository settings
+wazuh_repo_key_url: "https://packages.wazuh.com/key/GPG-KEY-WAZUH"
+wazuh_repo_url: "https://packages.wazuh.com/4.x/apt/"

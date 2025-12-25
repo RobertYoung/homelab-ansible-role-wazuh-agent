@@ -1,0 +1,78 @@
+name: Release
+
+# Trigger on pushes to main branch (where releases are cut from)
+# workflow_dispatch allows manual triggering from GitHub UI
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Minimal permissions by default (security best practice)
+# Grant specific permissions only where needed
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+
+    # Required permissions for semantic-release to function:
+    # - contents: write - Create releases and tags
+    # - issues: write - Comment on issues referenced in commits
+    # - pull-requests: write - Comment on PRs referenced in commits
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      # Security: Harden runner environment and restrict egress traffic
+      # See: https://github.com/step-security/harden-runner
+      - name: Harden Runner
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after reviewing egress traffic
+          disable-sudo: true
+          disable-file-monitoring: false
+
+      # Checkout the repository
+      # fetch-depth: 0 is required for semantic-release to analyze full commit history
+      # Action pinned to commit SHA for immutability (security best practice)
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          # Use PAT if you need to trigger other workflows from release commits
+          # Otherwise GITHUB_TOKEN is sufficient
+          persist-credentials: true
+
+      # Run semantic-release using the official action
+      # This action will:
+      # 1. Setup Node.js environment
+      # 2. Install semantic-release and plugins
+      # 3. Analyze commits since last release using conventional commit format
+      # 4. Determine next version number (major.minor.patch)
+      # 5. Create a git tag
+      # 6. Create a GitHub release with release notes
+      # Configuration is read from .releaserc.json
+      # Action pinned to commit SHA for immutability (security best practice)
+      - name: Run semantic-release
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        env:
+          # GITHUB_TOKEN is automatically provided by GitHub Actions
+          # It has the permissions specified in the job's permissions block
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Install conventional-changelog-conventionalcommits required by .releaserc.json preset
+          extra_plugins: |
+            conventional-changelog-conventionalcommits@7.0.2
+
+      # Optional: Output release information for debugging
+      # Semantic-release sets outputs that can be used in subsequent steps
+      - name: Output release info
+        if: always()
+        run: |
+          echo "Release workflow completed"
+          echo "Check the releases page for new releases: ${{ github.server_url }}/${{ github.repository }}/releases"

@@ -1,0 +1,59 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert wazuh-agent package is installed
+      ansible.builtin.assert:
+        that:
+          - "'wazuh-agent' in ansible_facts.packages"
+        fail_msg: "wazuh-agent package is not installed"
+        success_msg: "wazuh-agent package is installed"
+
+    - name: Check ossec.conf exists
+      ansible.builtin.stat:
+        path: /var/ossec/etc/ossec.conf
+      register: ossec_conf
+
+    - name: Assert ossec.conf exists with correct permissions
+      ansible.builtin.assert:
+        that:
+          - ossec_conf.stat.exists
+          - ossec_conf.stat.mode == '0640'
+        fail_msg: "ossec.conf does not exist or has wrong permissions"
+        success_msg: "ossec.conf exists with correct permissions"
+
+    - name: Read ossec.conf content
+      ansible.builtin.slurp:
+        src: /var/ossec/etc/ossec.conf
+      register: ossec_content
+
+    - name: Assert ossec.conf contains expected configuration
+      ansible.builtin.assert:
+        that:
+          - "'wazuh.local.iamrobertyoung.co.uk' in (ossec_content.content | b64decode)"
+          - "'1514' in (ossec_content.content | b64decode)"
+        fail_msg: "ossec.conf does not contain expected manager configuration"
+        success_msg: "ossec.conf contains correct manager configuration"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert wazuh-agent service is recognized
+      ansible.builtin.assert:
+        that:
+          - "'wazuh-agent.service' in ansible_facts.services"
+        fail_msg: "wazuh-agent service is not recognized by systemd"
+        success_msg: "wazuh-agent service is recognized by systemd"
+
+    - name: Assert wazuh-agent service is enabled
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['wazuh-agent.service'].status == 'enabled'
+        fail_msg: "wazuh-agent service is not enabled"
+        success_msg: "wazuh-agent service is enabled"

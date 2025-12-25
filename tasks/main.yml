@@ -1,0 +1,72 @@
+---
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - apt-transport-https
+    state: present
+    update_cache: true
+
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Wazuh GPG key
+  ansible.builtin.get_url:
+    url: "{{ wazuh_repo_key_url }}"
+    dest: /etc/apt/keyrings/wazuh.asc
+    mode: "0644"
+
+- name: Add Wazuh repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/wazuh.asc] {{ wazuh_repo_url }} stable main"
+    state: present
+    filename: wazuh
+    update_cache: true
+
+- name: Install Wazuh agent
+  ansible.builtin.apt:
+    name: wazuh-agent
+    state: present
+
+- name: Check if agent is already registered
+  ansible.builtin.stat:
+    path: /var/ossec/etc/client.keys
+  register: client_keys
+
+- name: Register Wazuh agent with manager
+  ansible.builtin.command:
+    cmd: >
+      /var/ossec/bin/agent-auth
+      -m {{ wazuh_manager_address }}
+      -A {{ wazuh_agent_name }}
+      -G {{ wazuh_agent_group }}
+      {{ '-P ' + wazuh_registration_password if wazuh_registration_password else '' }}
+  register: agent_auth_result
+  changed_when: agent_auth_result.rc == 0
+  failed_when: false
+  when: not client_keys.stat.exists or client_keys.stat.size == 0
+  notify: Restart wazuh-agent
+
+- name: Display registration result
+  ansible.builtin.debug:
+    msg: "Agent registration {{ 'succeeded' if agent_auth_result.rc == 0 else 'failed: ' + agent_auth_result.stderr }}"
+  when: agent_auth_result is defined and agent_auth_result.rc is defined
+
+- name: Deploy Wazuh agent configuration
+  ansible.builtin.template:
+    src: ossec.conf.j2
+    dest: /var/ossec/etc/ossec.conf
+    owner: root
+    group: wazuh
+    mode: "0640"
+  notify: Restart wazuh-agent
+
+- name: Ensure wazuh-agent service is enabled and started
+  ansible.builtin.systemd:
+    name: wazuh-agent
+    enabled: true
+    state: started
+    daemon_reload: true
